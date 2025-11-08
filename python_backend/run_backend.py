@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 import os
 import uvicorn
+from pathlib import Path
 
 if __name__ == "__main__":
-    os.chdir("/home/runner/workspace/python_backend")
+    # Change to the directory where this script is located
+    script_dir = Path(__file__).parent.resolve()
+    os.chdir(script_dir)
     
     uvicorn.run(
         "main:app",
