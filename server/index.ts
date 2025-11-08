@@ -1,8 +1,58 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { spawn } from "child_process";
 
 const app = express();
+
+let pythonBackend: ReturnType<typeof spawn> | null = null;
+
+function startPythonBackend() {
+  log("Starting Python backend...");
+  
+  pythonBackend = spawn("python", ["main.py"], {
+    cwd: "./python_backend",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+
+  pythonBackend.stdout?.on("data", (data) => {
+    const output = data.toString().trim();
+    if (output) log(`[Python] ${output}`);
+  });
+
+  pythonBackend.stderr?.on("data", (data) => {
+    const output = data.toString().trim();
+    if (output && !output.includes("DeprecationWarning")) {
+      log(`[Python] ${output}`);
+    }
+  });
+
+  pythonBackend.on("close", (code) => {
+    log(`Python backend exited with code ${code}`);
+    pythonBackend = null;
+  });
+
+  pythonBackend.on("error", (err) => {
+    log(`Failed to start Python backend: ${err.message}`);
+    pythonBackend = null;
+  });
+}
+
+startPythonBackend();
+
+process.on("SIGTERM", () => {
+  if (pythonBackend) {
+    pythonBackend.kill();
+  }
+  process.exit(0);
+});
+
+process.on("SIGINT", () => {
+  if (pythonBackend) {
+    pythonBackend.kill();
+  }
+  process.exit(0);
+});
 
 declare module 'http' {
   interface IncomingMessage {
@@ -66,30 +116,10 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  // On Windows, use 127.0.0.1 instead of 0.0.0.0 (Windows doesn't support 0.0.0.0)
-  let host = process.env.HOST || 'localhost';
+  const host = '0.0.0.0';
   
-  // Force Windows-compatible host binding
-  const isWindows = process.platform === 'win32';
-  if (isWindows) {
-    // Replace 0.0.0.0 with 127.0.0.1 on Windows (required for Windows compatibility)
-    if (host === '0.0.0.0' || host === '::' || !host) {
-      host = '127.0.0.1';
-      log(`Windows detected: Changed host from 0.0.0.0 to 127.0.0.1`);
-    } else if (host === 'localhost') {
-      host = '127.0.0.1';
-    }
-  } else if (host === '0.0.0.0') {
-    // On non-Windows, 0.0.0.0 is fine, but log it
-    log(`Using host 0.0.0.0 (all interfaces)`);
-  }
-  
-  log(`Starting server on ${host}:${port} (platform: ${process.platform})`);
+  log(`Starting server on ${host}:${port}`);
   server.listen(port, host, () => {
     log(`✅ Server running on http://${host}:${port}`);
   });
