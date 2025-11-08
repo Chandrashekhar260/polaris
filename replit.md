@@ -25,10 +25,18 @@ Preferred communication style: Simple, everyday language.
 - Custom CSS variables for theming (light/dark mode support)
 - Design inspired by Linear's productivity aesthetics and Notion's knowledge management interface
 - **Smooth Animations:** Framer Motion integration for enhanced UX
+  - Animated splash screen on app load with gradient background and logo animations
   - Fade-in and slide-in entrance animations for page loads
   - Staggered children animations for cards and recommendation lists
   - Layout animations for dynamic content changes
   - Subtle timing (0.3-0.5s) for professional feel
+- **Splash Screen Experience:**
+  - Beautiful animated gradient background (purple/blue/pink theme)
+  - Brain icon logo with rotating scale animations and glow effect
+  - Sparkles icon with continuous rotation
+  - "LearnAI" branding text with slide-in animation
+  - Loading indicators and progress bar
+  - 3-second display duration before smooth fade to main app
 
 **State Management Approach:**
 - React Query handles all Python backend REST API state with 10-60 second refetch intervals
