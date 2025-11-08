@@ -3,7 +3,7 @@ Insights Route - Get latest learning insights
 """
 from fastapi import APIRouter
 from typing import List, Dict
-from services.vector_store import vector_store
+from services.vector_store import get_vector_store
 
 router = APIRouter()
 
@@ -19,6 +19,7 @@ async def get_insights() -> Dict:
     - Potential struggle areas
     """
     # Get recent sessions
+    vector_store = get_vector_store()
     recent_sessions = vector_store.get_recent_sessions(limit=10)
     
     if not recent_sessions:
@@ -76,5 +77,6 @@ async def search_insights(query: str, limit: int = 5) -> List[Dict]:
         query: Search query (e.g., "React hooks", "authentication")
         limit: Maximum number of results
     """
+    vector_store = get_vector_store()
     results = vector_store.search_similar_sessions(query, limit=limit)
     return results

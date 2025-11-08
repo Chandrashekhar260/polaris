@@ -352,6 +352,163 @@ Keep it concise but meaningful (3-4 sentences)."""
             "resource_type": "tutorial",
             "topics": topics[:3]
         }]
+    
+    async def generate_quiz(
+        self,
+        topics: List[str],
+        content_summary: str,
+        num_questions: int = 5
+    ) -> Dict:
+        """
+        Generate quiz questions based on topics and content
+        
+        Args:
+            topics: List of topics to quiz on
+            content_summary: Summary of the content
+            num_questions: Number of questions to generate
+            
+        Returns:
+            Dictionary with quiz questions
+        """
+        if not topics:
+            return {
+                "questions": [],
+                "message": "No topics available for quiz generation"
+            }
+        
+        prompt = f"""Generate {num_questions} quiz questions based on the following learning content:
+
+Topics: {', '.join(topics)}
+Content Summary: {content_summary}
+
+For each question, provide:
+1. Question text
+2. 4 multiple choice options (A, B, C, D)
+3. Correct answer (A, B, C, or D)
+4. Brief explanation
+
+Format as JSON with this structure:
+{{
+  "questions": [
+    {{
+      "question": "Question text here",
+      "options": {{
+        "A": "Option A",
+        "B": "Option B",
+        "C": "Option C",
+        "D": "Option D"
+      }},
+      "correct_answer": "A",
+      "explanation": "Why this answer is correct"
+    }}
+  ]
+}}"""
+        
+        # Mock mode fallback
+        if not self.api_key_available or not self.llm:
+            return self._mock_quiz(topics, num_questions)
+        
+        try:
+            from langchain_core.messages import HumanMessage
+            response = await self.llm.ainvoke([HumanMessage(content=prompt)])
+            
+            # Parse response
+            content = ""
+            if isinstance(response.content, str):
+                content = response.content
+            elif isinstance(response.content, list):
+                for block in response.content:
+                    if isinstance(block, str):
+                        content += block
+                    elif isinstance(block, dict) and "text" in block:
+                        content += str(block.get("text", ""))
+            
+            # Try to parse JSON from response
+            import json
+            import re
+            
+            # Extract JSON from markdown code blocks if present
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', content, re.DOTALL)
+            if json_match:
+                content = json_match.group(1)
+            else:
+                # Try to find JSON object in content
+                json_match = re.search(r'\{.*\}', content, re.DOTALL)
+                if json_match:
+                    content = json_match.group(0)
+            
+            try:
+                quiz_data = json.loads(content)
+                return quiz_data
+            except json.JSONDecodeError:
+                # Fallback: parse manually
+                return self._parse_quiz_response(content, topics, num_questions)
+                
+        except Exception as e:
+            print(f"Error generating quiz: {e}")
+            return self._mock_quiz(topics, num_questions)
+    
+    def _parse_quiz_response(self, content: str, topics: List[str], num_questions: int) -> Dict:
+        """Parse quiz response when JSON parsing fails"""
+        questions = []
+        lines = content.split('\n')
+        current_question = {}
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Detect question
+            if line.startswith(('Q', 'Question', '1.', '2.', '3.', '4.', '5.')):
+                if current_question:
+                    questions.append(current_question)
+                current_question = {
+                    "question": line.lstrip('0123456789.Q '),
+                    "options": {},
+                    "correct_answer": "A",
+                    "explanation": ""
+                }
+            # Detect options
+            elif line.startswith(('A)', 'A.', 'B)', 'B.', 'C)', 'C.', 'D)', 'D.')):
+                option_key = line[0]
+                option_text = line[2:].strip()
+                if current_question:
+                    current_question["options"][option_key] = option_text
+            # Detect correct answer
+            elif 'correct' in line.lower() or 'answer' in line.lower():
+                if current_question:
+                    current_question["explanation"] = line
+        
+        if current_question:
+            questions.append(current_question)
+        
+        # Ensure we have at least some questions
+        if not questions:
+            return self._mock_quiz(topics, num_questions)
+        
+        return {"questions": questions[:num_questions]}
+    
+    def _mock_quiz(self, topics: List[str], num_questions: int) -> Dict:
+        """Provide mock quiz when API is not available"""
+        questions = []
+        for i in range(min(num_questions, 3)):
+            questions.append({
+                "question": f"What is a key concept in {topics[0] if topics else 'programming'}?",
+                "options": {
+                    "A": "Basic syntax and structure",
+                    "B": "Advanced optimization",
+                    "C": "Database design",
+                    "D": "UI/UX principles"
+                },
+                "correct_answer": "A",
+                "explanation": "Understanding basic syntax is fundamental to learning any programming topic."
+            })
+        
+        return {
+            "questions": questions,
+            "message": "Mock quiz - configure GOOGLE_API_KEY for AI-generated questions"
+        }
 
 # Lazy singleton - only initialize when first accessed
 _ai_agent_instance = None

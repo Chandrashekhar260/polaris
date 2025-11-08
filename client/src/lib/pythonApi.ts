@@ -67,7 +67,7 @@ export interface LearningSummary {
  * Fetch learning insights from Python backend
  */
 export async function fetchInsights(): Promise<InsightsData> {
-  const response = await fetch(`${PYTHON_API_BASE}/insights`);
+  const response = await fetch(`${PYTHON_API_BASE}/api/insights`);
   if (!response.ok) {
     throw new Error('Failed to fetch insights');
   }
@@ -78,7 +78,7 @@ export async function fetchInsights(): Promise<InsightsData> {
  * Fetch AI-generated recommendations
  */
 export async function fetchRecommendations(): Promise<Recommendation[]> {
-  const response = await fetch(`${PYTHON_API_BASE}/recommendations`);
+  const response = await fetch(`${PYTHON_API_BASE}/api/recommendations`);
   if (!response.ok) {
     throw new Error('Failed to fetch recommendations');
   }
@@ -89,7 +89,7 @@ export async function fetchRecommendations(): Promise<Recommendation[]> {
  * Fetch learning summary for a time period
  */
 export async function fetchSummary(period: 'daily' | 'weekly' | 'monthly' = 'weekly'): Promise<LearningSummary> {
-  const response = await fetch(`${PYTHON_API_BASE}/summary?period=${period}`);
+  const response = await fetch(`${PYTHON_API_BASE}/api/summary?period=${period}`);
   if (!response.ok) {
     throw new Error('Failed to fetch summary');
   }
@@ -100,7 +100,7 @@ export async function fetchSummary(period: 'daily' | 'weekly' | 'monthly' = 'wee
  * Fetch summary statistics
  */
 export async function fetchSummaryStats(): Promise<SummaryStats> {
-  const response = await fetch(`${PYTHON_API_BASE}/summary/stats`);
+  const response = await fetch(`${PYTHON_API_BASE}/api/summary/stats`);
   if (!response.ok) {
     throw new Error('Failed to fetch summary stats');
   }
@@ -111,7 +111,7 @@ export async function fetchSummaryStats(): Promise<SummaryStats> {
  * Search for similar learning sessions
  */
 export async function searchSessions(query: string, limit: number = 5): Promise<LearningSession[]> {
-  const response = await fetch(`${PYTHON_API_BASE}/insights/search?query=${encodeURIComponent(query)}&limit=${limit}`);
+  const response = await fetch(`${PYTHON_API_BASE}/api/insights/search?query=${encodeURIComponent(query)}&limit=${limit}`);
   if (!response.ok) {
     throw new Error('Failed to search sessions');
   }
@@ -131,4 +131,84 @@ export async function checkBackendHealth(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Upload file (PDF, code, etc.) for analysis
+ */
+export async function uploadFile(file: File): Promise<{
+  success: boolean;
+  session_id: string;
+  filename: string;
+  file_type: string;
+  analysis: any;
+  recommendations: Recommendation[];
+  quiz?: any;
+  timestamp: string;
+}> {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await fetch(`${PYTHON_API_BASE}/api/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Failed to upload file' }));
+    throw new Error(error.detail || 'Failed to upload file');
+  }
+  
+  return response.json();
+}
+
+/**
+ * Quiz interfaces
+ */
+export interface QuizQuestion {
+  question: string;
+  options: {
+    A: string;
+    B: string;
+    C: string;
+    D: string;
+  };
+  correct_answer: 'A' | 'B' | 'C' | 'D';
+  explanation: string;
+}
+
+export interface Quiz {
+  questions: QuizQuestion[];
+  message?: string;
+}
+
+/**
+ * Fetch quiz questions
+ */
+export async function fetchQuiz(
+  topics?: string,
+  sessionId?: string,
+  numQuestions: number = 5
+): Promise<Quiz> {
+  const params = new URLSearchParams();
+  if (topics) params.append('topics', topics);
+  if (sessionId) params.append('session_id', sessionId);
+  params.append('num_questions', numQuestions.toString());
+  
+  const response = await fetch(`${PYTHON_API_BASE}/api/quiz?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch quiz');
+  }
+  return response.json();
+}
+
+/**
+ * Fetch quiz for a specific session
+ */
+export async function fetchQuizForSession(sessionId: string, numQuestions: number = 5): Promise<Quiz> {
+  const response = await fetch(`${PYTHON_API_BASE}/api/quiz/session/${sessionId}?num_questions=${numQuestions}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch quiz for session');
+  }
+  return response.json();
 }

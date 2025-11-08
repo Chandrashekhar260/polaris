@@ -3,6 +3,33 @@ Text Cleaning Utilities
 """
 import re
 
+def clean_text(text: str) -> str:
+    """
+    Clean text content for processing
+    
+    Args:
+        text: Raw text string
+        
+    Returns:
+        Cleaned text string
+    """
+    # Remove excessive whitespace
+    text = re.sub(r'\n\s*\n\s*\n', '\n\n', text)
+    
+    # Remove special characters that might cause issues
+    text = re.sub(r'[\x00-\x08\x0b-\x0c\x0e-\x1f\x7f-\x9f]', '', text)
+    
+    # Limit line length for very long lines
+    lines = text.split('\n')
+    cleaned_lines = []
+    for line in lines:
+        if len(line) > 500:
+            cleaned_lines.append(line[:500] + '...')
+        else:
+            cleaned_lines.append(line)
+    
+    return '\n'.join(cleaned_lines)
+
 def clean_code(code: str) -> str:
     """
     Clean code content for processing

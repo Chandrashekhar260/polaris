@@ -3,8 +3,8 @@ Recommendations Route - Get AI-generated learning recommendations
 """
 from fastapi import APIRouter
 from typing import List, Dict
-from services.vector_store import vector_store
-from services.ai_agent import ai_agent
+from services.vector_store import get_vector_store
+from services.ai_agent import get_ai_agent
 
 router = APIRouter()
 
@@ -16,6 +16,7 @@ async def get_recommendations() -> List[Dict]:
     Returns AI-generated recommendations based on recent learning activity
     """
     # Get recent sessions to analyze
+    vector_store = get_vector_store()
     recent_sessions = vector_store.get_recent_sessions(limit=10)
     
     if not recent_sessions:
@@ -45,6 +46,7 @@ async def get_recommendations() -> List[Dict]:
     recent_summary = ". ".join(summaries[:3])
     
     try:
+        ai_agent = get_ai_agent()
         recommendations = await ai_agent.generate_recommendations(
             topics=unique_topics,
             struggles=all_struggles,
@@ -69,4 +71,5 @@ async def get_stored_recommendations(limit: int = 10) -> List[Dict]:
     """
     Get previously stored recommendations from vector database
     """
+    vector_store = get_vector_store()
     return vector_store.get_recommendations(limit=limit)

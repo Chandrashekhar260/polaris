@@ -7,6 +7,8 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import Dashboard from "@/pages/Dashboard";
+import Upload from "@/pages/Upload";
+import Quiz from "@/pages/Quiz";
 import Recommendations from "@/pages/Recommendations";
 import Progress from "@/pages/Progress";
 import Settings from "@/pages/Settings";
@@ -16,6 +18,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/upload" component={Upload} />
+      <Route path="/quiz" component={Quiz} />
       <Route path="/recommendations" component={Recommendations} />
       <Route path="/progress" component={Progress} />
       <Route path="/settings" component={Settings} />

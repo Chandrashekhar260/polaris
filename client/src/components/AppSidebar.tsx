@@ -1,4 +1,4 @@
-import { LayoutDashboard, Lightbulb, TrendingUp, Settings } from "lucide-react";
+import { LayoutDashboard, Lightbulb, TrendingUp, Settings, Upload, BookOpen } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -19,6 +19,16 @@ const menuItems = [
     title: "Dashboard",
     url: "/",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Upload & Analyze",
+    url: "/upload",
+    icon: Upload,
+  },
+  {
+    title: "Quiz",
+    url: "/quiz",
+    icon: BookOpen,
   },
   {
     title: "Recommendations",

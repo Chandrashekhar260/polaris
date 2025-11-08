@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-const WS_URL = import.meta.env.VITE_PYTHON_WS_URL || 'ws://localhost:8000/ws/stream';
+const WS_URL = import.meta.env.VITE_PYTHON_WS_URL || 'ws://localhost:8000/api/ws/stream';
 
 export interface WebSocketMessage {
   type: 'analysis' | 'status' | 'error';

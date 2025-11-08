@@ -4,8 +4,8 @@ Summary Route - Get learning progress summaries
 from fastapi import APIRouter, Query
 from typing import Dict
 from datetime import datetime, timedelta
-from services.vector_store import vector_store
-from services.ai_agent import ai_agent
+from services.vector_store import get_vector_store
+from services.ai_agent import get_ai_agent
 
 router = APIRouter()
 
@@ -23,6 +23,7 @@ async def get_summary(
         Summary of learning progress, topics covered, and areas of focus
     """
     # Get all sessions (we'll filter by time in a real implementation)
+    vector_store = get_vector_store()
     all_sessions = vector_store.get_recent_sessions(limit=100)
     
     if not all_sessions:
@@ -49,6 +50,7 @@ async def get_summary(
         filtered_sessions = all_sessions
     
     # Generate AI summary
+    ai_agent = get_ai_agent()
     summary_data = await ai_agent.generate_summary(
         sessions=filtered_sessions,
         period=period
@@ -68,6 +70,7 @@ async def get_summary_stats() -> Dict:
     """
     Get statistical overview of learning progress
     """
+    vector_store = get_vector_store()
     sessions = vector_store.get_recent_sessions(limit=100)
     
     # Calculate stats

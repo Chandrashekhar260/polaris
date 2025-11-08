@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from routes import stream, insights, recommendations, summary
+from routes import stream, insights, recommendations, summary, upload, quiz
 
 # Load environment variables
 load_dotenv()
@@ -53,6 +53,8 @@ app.include_router(stream.router, prefix="/api", tags=["Stream"])
 app.include_router(insights.router, prefix="/api", tags=["Insights"])
 app.include_router(recommendations.router, prefix="/api", tags=["Recommendations"])
 app.include_router(summary.router, prefix="/api", tags=["Summary"])
+app.include_router(upload.router, prefix="/api", tags=["Upload"])
+app.include_router(quiz.router, prefix="/api", tags=["Quiz"])
 
 @app.get("/")
 async def root():
@@ -70,7 +72,7 @@ async def health_check():
         "status": "healthy",
         "gemini_api_configured": bool(os.getenv("GOOGLE_API_KEY")),
         "vector_store": "chromadb",
-        "endpoints": ["/api/ws/stream", "/api/insights", "/api/recommendations", "/api/summary"]
+        "endpoints": ["/api/ws/stream", "/api/insights", "/api/recommendations", "/api/summary", "/api/upload", "/api/quiz"]
     }
 
 if __name__ == "__main__":

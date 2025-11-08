@@ -6,8 +6,8 @@ from datetime import datetime
 import uuid
 
 from services.websocket_manager import ws_manager
-from services.ai_agent import ai_agent
-from services.vector_store import vector_store
+from services.ai_agent import get_ai_agent
+from services.vector_store import get_vector_store
 
 router = APIRouter()
 
@@ -46,6 +46,7 @@ async def websocket_stream(websocket: WebSocket):
             
             # Analyze code with AI
             try:
+                ai_agent = get_ai_agent()
                 analysis = await ai_agent.analyze_code(
                     code_content=content,
                     filename=filename,
@@ -56,6 +57,7 @@ async def websocket_stream(websocket: WebSocket):
                 session_id = str(uuid.uuid4())
                 
                 # Store in vector database
+                vector_store = get_vector_store()
                 await vector_store.store_session(
                     session_id=session_id,
                     code_content=content,

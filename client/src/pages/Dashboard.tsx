@@ -15,10 +15,15 @@ export default function Dashboard() {
   const { data: insights, isLoading: insightsLoading, isError: insightsError, refetch: refetchInsights } = useInsights();
   const { data: recommendations, isLoading: recsLoading, isError: recsError, refetch: refetchRecs } = useRecommendations();
   const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useSummaryStats();
-  const { data: backendHealthy } = useBackendHealth();
+  const { data: backendHealthy, isLoading: healthLoading } = useBackendHealth();
   
   // WebSocket for real-time updates
   const { isConnected, lastMessage, error: wsError } = useWebSocket();
+  
+  // Determine overall connection status
+  const isBackendConnected = backendHealthy === true;
+  const isBackendOffline = backendHealthy === false;
+  const showConnectionStatus = !healthLoading;
   
   // Invalidate queries when new analysis comes through WebSocket
   useEffect(() => {
@@ -63,47 +68,80 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <div className="flex items-center gap-2">
-            {backendHealthy === false && (
-              <Badge variant="secondary" className="bg-orange-500/10 text-orange-700 dark:text-orange-400">
-                <div className="w-2 h-2 rounded-full bg-orange-500 mr-2" />
-                Backend Offline
-              </Badge>
+            {showConnectionStatus && (
+              <>
+                {isBackendConnected ? (
+                  <Badge variant="secondary" className="bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20">
+                    <div className="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse" />
+                    Backend Online
+                  </Badge>
+                ) : isBackendOffline ? (
+                  <Badge variant="secondary" className="bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20">
+                    <div className="w-2 h-2 rounded-full bg-red-500 mr-2" />
+                    Backend Offline
+                  </Badge>
+                ) : null}
+                <Badge 
+                  variant="secondary" 
+                  className={isConnected 
+                    ? "bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20" 
+                    : "bg-gray-500/10 text-gray-700 dark:text-gray-400 border border-gray-500/20"
+                  }
+                  data-testid="badge-connection-status"
+                >
+                  <div className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
+                  {isConnected ? 'Live Monitoring' : 'Not Connected'}
+                </Badge>
+              </>
             )}
-            <Badge 
-              variant="secondary" 
-              className={isConnected 
-                ? "bg-green-500/10 text-green-700 dark:text-green-400" 
-                : "bg-gray-500/10 text-gray-700 dark:text-gray-400"
-              }
-              data-testid="badge-connection-status"
-            >
-              <div className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-gray-500'}`} />
-              {isConnected ? 'Live Monitoring' : 'Not Connected'}
-            </Badge>
           </div>
         </div>
         <p className="text-muted-foreground">
           Track your learning journey and get AI-powered insights
         </p>
         
-        {(insightsError || recsError || statsError) && (
+        {(isBackendOffline || insightsError || recsError || statsError) && (
           <div className="mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-md">
-            <p className="text-sm text-destructive font-medium mb-2">Unable to load data from Python backend</p>
+            <p className="text-sm text-destructive font-medium mb-2">
+              {isBackendOffline ? 'Backend Connection Failed' : 'Unable to load data from Python backend'}
+            </p>
             <p className="text-xs text-muted-foreground mb-3">
               The backend service may be offline or unreachable. Make sure the Python backend is running on port 8000.
+              <br />
+              <span className="font-mono text-xs mt-1 block">Backend URL: http://localhost:8000</span>
             </p>
-            <Button 
-              onClick={() => {
-                if (insightsError) refetchInsights();
-                if (recsError) refetchRecs();
-                if (statsError) refetchStats();
-              }} 
-              variant="outline" 
-              size="sm"
-              data-testid="button-retry-backend"
-            >
-              Retry Connection
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: ['/api/python/health'] });
+                  if (insightsError) refetchInsights();
+                  if (recsError) refetchRecs();
+                  if (statsError) refetchStats();
+                }} 
+                variant="outline" 
+                size="sm"
+                data-testid="button-retry-backend"
+              >
+                Retry Connection
+              </Button>
+              {isBackendOffline && (
+                <Button 
+                  onClick={() => window.open('http://localhost:8000/health', '_blank')}
+                  variant="outline" 
+                  size="sm"
+                >
+                  Check Backend Health
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {isBackendConnected && isConnected && (
+          <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-md">
+            <p className="text-sm text-green-700 dark:text-green-400 font-medium">
+              ✅ Successfully connected to Python backend at http://localhost:8000
+            </p>
           </div>
         )}
       </div>
