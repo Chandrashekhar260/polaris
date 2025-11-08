@@ -60,9 +60,21 @@ export function useWebSocket(): UseWebSocketReturn {
         reconnectAttempts.current = 0;
       };
 
-      ws.onmessage = (event) => {
+      ws.onmessage = async (event) => {
         try {
-          const data = JSON.parse(event.data);
+          let messageText = event.data;
+          
+          // Handle Blob data (convert to text first)
+          if (event.data instanceof Blob) {
+            messageText = await event.data.text();
+          }
+          
+          // Skip empty or non-JSON messages
+          if (!messageText || typeof messageText !== 'string') {
+            return;
+          }
+          
+          const data = JSON.parse(messageText);
           console.log('📨 WebSocket message received:', data.type, data); // Debug log
           // Normalize message format
           const message: WebSocketMessage = {
