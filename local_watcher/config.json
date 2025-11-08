@@ -1,0 +1,14 @@
+{
+  "watch_directory": "~/Development",
+  "backend_url": "ws://localhost:8000/api/ws/stream",
+  "ignore_patterns": [
+    "**/node_modules/**",
+    "**/.git/**",
+    "**/venv/**",
+    "**/__pycache__/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.next/**",
+    "**/coverage/**"
+  ]
+}
