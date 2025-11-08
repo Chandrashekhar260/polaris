@@ -71,11 +71,26 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  const host = process.env.HOST || "localhost";
-  server.listen({
-    port,
-    host,
-  }, () => {
-    log(`serving on http://${host}:${port}`);
+  // On Windows, use 127.0.0.1 instead of 0.0.0.0 (Windows doesn't support 0.0.0.0)
+  let host = process.env.HOST || 'localhost';
+  
+  // Force Windows-compatible host binding
+  const isWindows = process.platform === 'win32';
+  if (isWindows) {
+    // Replace 0.0.0.0 with 127.0.0.1 on Windows (required for Windows compatibility)
+    if (host === '0.0.0.0' || host === '::' || !host) {
+      host = '127.0.0.1';
+      log(`Windows detected: Changed host from 0.0.0.0 to 127.0.0.1`);
+    } else if (host === 'localhost') {
+      host = '127.0.0.1';
+    }
+  } else if (host === '0.0.0.0') {
+    // On non-Windows, 0.0.0.0 is fine, but log it
+    log(`Using host 0.0.0.0 (all interfaces)`);
+  }
+  
+  log(`Starting server on ${host}:${port} (platform: ${process.platform})`);
+  server.listen(port, host, () => {
+    log(`✅ Server running on http://${host}:${port}`);
   });
 })();

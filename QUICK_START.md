@@ -1,70 +1,47 @@
-# 🚀 Quick Start - 30 Seconds Setup
+# Quick Start - Code in ANY Folder
 
-## What You'll Get:
-✅ Real-time code monitoring from VS Code  
-✅ AI analysis of your learning patterns  
-✅ Personalized recommendations dashboard  
+## 🚀 3 Steps to Get Started
 
----
+### 1. Start File Watcher (Watch Current VS Code Folder)
 
-## Run These 2 Commands:
-
-### 1. Start Python Backend (in Shell)
-```bash
-./start_backend.sh
+**In VS Code Terminal:**
+```cmd
+cd PersonalLearningAgent
+python vscode_watcher.py "%CD%"
 ```
 
-### 2. Edit & Run File Watcher (in NEW shell)
-```bash
-cd local_watcher
-# Edit watcher.py - change line 15:
-# WATCH_DIRECTORY = "/home/runner/workspace"  # ← Your VS Code path
-python watcher.py
-```
+This watches **whatever folder VS Code is currently in**!
 
----
+### 2. Create Folder & File in VS Code
 
-## ✅ **Frontend Already Running!**
+1. **File → New Folder** (name it anything)
+2. **Create file** in that folder (`.js`, `.tsx`, `.py`, etc.)
+3. **Write some code**
+4. **Save** (`Ctrl+S`)
 
-The React dashboard is already live:
-- **Running on port 5000** (check workflow: "Start application")  
-- **Already connected to backend** - just needs backend to start!
-- Shows connection status badge
+### 3. See Suggestions
 
----
+1. Open: `http://localhost:5000`
+2. Dashboard → Scroll to **"Live Suggestions"**
+3. See your recommendations!
 
-## How to Know It's Working:
+## 📝 Example
 
-1. **Python backend** shows:
-   ```
-   INFO: Uvicorn running on http://0.0.0.0:8000
-   ```
+**VS Code:**
+- Create folder: `MyCode`
+- Create file: `app.js`
+- Code:
+  ```javascript
+  function test() {
+      console.log("Hello"  // Missing )
+  }
+  ```
+- Save (`Ctrl+S`)
 
-2. **Frontend** (port 5000) shows:
-   - 🟢 "Live Monitoring" badge (green)
-   - Stats update when you code
+**Frontend:**
+- Open `http://localhost:5000`
+- See error detected in "Live Suggestions"!
 
-3. **File watcher** shows:
-   ```
-   Monitoring: /your/path
-   Connected to backend via WebSocket
-   ```
+## ✅ That's It!
 
----
-
-## What Gets Tracked:
-
-✅ Code files: `.py .js .ts .tsx .java .cpp .go .rs .html .css`  
-❌ Not tracked: PDFs, images, videos, docs
-
----
-
-## Test It:
-
-1. Create a new `.py` file in your monitored folder
-2. Write some code
-3. Check dashboard - you'll see new session!
-
----
-
-Need detailed setup? See `SETUP_GUIDE.md`
+Code → Save → See Suggestions! 🎉

@@ -1,10 +1,23 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-const WS_URL = import.meta.env.VITE_PYTHON_WS_URL || 'ws://localhost:8000/api/ws/stream';
+// Connect to Node.js server WebSocket proxy (same port as frontend)
+// The Node.js server will proxy to Python backend
+const WS_URL = import.meta.env.VITE_PYTHON_WS_URL || 
+  (typeof window !== 'undefined' 
+    ? `ws://${window.location.host}/api/ws/stream` 
+    : 'ws://localhost:5000/api/ws/stream');
 
 export interface WebSocketMessage {
-  type: 'analysis' | 'status' | 'error';
-  data: any;
+  type: 'connected' | 'received' | 'analysis' | 'documentation' | 'recommendations' | 'quiz' | 'error';
+  data?: any;
+  analysis?: any;
+  suggestions?: any[];
+  errors?: any[];
+  weak_areas?: string[];
+  recommendations?: any[];
+  quiz?: any;
+  focus_areas?: string[];
+  message?: string;
   timestamp?: string;
 }
 
@@ -28,9 +41,19 @@ export function useWebSocket(): UseWebSocketReturn {
 
   const connect = useCallback(() => {
     try {
+      // Create WebSocket with longer timeout for initial connection
       const ws = new WebSocket(WS_URL);
       
+      // Set a timeout for connection (30 seconds)
+      const connectionTimeout = setTimeout(() => {
+        if (ws.readyState === WebSocket.CONNECTING) {
+          console.warn('WebSocket connection timeout, will retry...');
+          ws.close();
+        }
+      }, 30000);
+      
       ws.onopen = () => {
+        clearTimeout(connectionTimeout);
         console.log('WebSocket connected to Python backend');
         setIsConnected(true);
         setError(null);
@@ -39,7 +62,15 @@ export function useWebSocket(): UseWebSocketReturn {
 
       ws.onmessage = (event) => {
         try {
-          const message: WebSocketMessage = JSON.parse(event.data);
+          const data = JSON.parse(event.data);
+          console.log('📨 WebSocket message received:', data.type, data); // Debug log
+          // Normalize message format
+          const message: WebSocketMessage = {
+            type: data.type || 'unknown',
+            ...data, // Include all fields from backend
+            data: data.analysis || data.quiz || data.recommendations || data,
+            timestamp: data.timestamp
+          };
           setLastMessage(message);
         } catch (err) {
           console.error('Failed to parse WebSocket message:', err);
@@ -47,12 +78,14 @@ export function useWebSocket(): UseWebSocketReturn {
       };
 
       ws.onerror = (event) => {
+        clearTimeout(connectionTimeout);
         console.error('WebSocket error:', event);
         setError(new Error('WebSocket connection error'));
       };
 
-      ws.onclose = () => {
-        console.log('WebSocket disconnected');
+      ws.onclose = (event) => {
+        clearTimeout(connectionTimeout);
+        console.log('WebSocket disconnected', event.code, event.reason);
         setIsConnected(false);
         
         // Attempt to reconnect with exponential backoff

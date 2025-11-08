@@ -47,12 +47,12 @@ export default function Progress() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Learning Progress</h1>
-          <p className="text-muted-foreground">
-            Track your growth and identify areas for improvement
-          </p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold mb-2">Learning Progress</h1>
+        <p className="text-muted-foreground">
+          Track your growth and identify areas for improvement
+        </p>
+      </div>
         <Button
           onClick={() => {
             queryClient.invalidateQueries({ queryKey: ['/api/python/summary', 'weekly'] });
@@ -117,17 +117,17 @@ export default function Progress() {
                   ))}
                 </div>
               ) : weeklySummaryData.topics_learned && weeklySummaryData.topics_learned.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                   {weeklySummaryData.topics_learned.map((topic, idx) => (
-                    <Badge
-                      key={idx}
-                      variant="secondary"
-                      className="bg-green-500/10 text-green-700 dark:text-green-400"
-                    >
-                      {topic}
-                    </Badge>
-                  ))}
-                </div>
+                  <Badge
+                    key={idx}
+                    variant="secondary"
+                    className="bg-green-500/10 text-green-700 dark:text-green-400"
+                  >
+                    {topic}
+                  </Badge>
+                ))}
+              </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No topics tracked yet</p>
               )}
@@ -145,17 +145,17 @@ export default function Progress() {
                   ))}
                 </div>
               ) : weeklySummaryData.struggling_topics && weeklySummaryData.struggling_topics.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                   {weeklySummaryData.struggling_topics.map((topic, idx) => (
-                    <Badge
-                      key={idx}
-                      variant="secondary"
-                      className="bg-orange-500/10 text-orange-700 dark:text-orange-400"
-                    >
-                      {topic}
-                    </Badge>
-                  ))}
-                </div>
+                  <Badge
+                    key={idx}
+                    variant="secondary"
+                    className="bg-orange-500/10 text-orange-700 dark:text-orange-400"
+                  >
+                    {topic}
+                  </Badge>
+                ))}
+              </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No struggling topics identified</p>
               )}
@@ -173,11 +173,11 @@ export default function Progress() {
             ))}
           </div>
         ) : topicMastery.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {topicMastery.map((topic) => (
-              <TopicProgress key={topic.topic} {...topic} />
-            ))}
-          </div>
+            <TopicProgress key={topic.topic} {...topic} />
+          ))}
+        </div>
         ) : (
           <Card>
             <CardContent className="p-6 text-center text-muted-foreground">
@@ -189,31 +189,31 @@ export default function Progress() {
       </div>
 
       {struggleAreas.length > 0 && (
-        <div>
-          <h2 className="text-2xl font-semibold mb-4">Areas Needing Focus</h2>
-          <div className="space-y-4">
+      <div>
+        <h2 className="text-2xl font-semibold mb-4">Areas Needing Focus</h2>
+        <div className="space-y-4">
             {struggleAreas.map((area, idx) => (
-              <Card key={idx}>
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-md bg-orange-500/10 flex items-center justify-center shrink-0">
-                      <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <h3 className="font-semibold">{area.topic}</h3>
-                        <Badge variant="outline" className="text-xs">
-                          {area.sessions} sessions
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{area.description}</p>
-                    </div>
+            <Card key={idx}>
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-md bg-orange-500/10 flex items-center justify-center shrink-0">
+                    <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <h3 className="font-semibold">{area.topic}</h3>
+                      <Badge variant="outline" className="text-xs">
+                        {area.sessions} sessions
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{area.description}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
+      </div>
       )}
     </div>
   );

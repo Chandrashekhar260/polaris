@@ -75,6 +75,37 @@ async def health_check():
         "endpoints": ["/api/ws/stream", "/api/insights", "/api/recommendations", "/api/summary", "/api/upload", "/api/quiz"]
     }
 
+@app.get("/api/rate-limit")
+async def get_rate_limit_status():
+    """Get current API rate limit status"""
+    from services.rate_limiter import get_rate_limiter
+    rate_limiter = get_rate_limiter()
+    status = rate_limiter.get_status()
+    return {
+        "count": status["count"],
+        "limit": status["limit"],
+        "remaining": status["remaining"],
+        "can_request": status["can_request"],
+        "last_date": status["last_date"],
+        "message": f"{status['remaining']} API calls remaining today (out of {status['limit']})"
+    }
+
+@app.post("/api/rate-limit/reset")
+async def reset_rate_limit():
+    """Reset the rate limit counter (useful when switching API keys or for testing)"""
+    from services.rate_limiter import get_rate_limiter
+    rate_limiter = get_rate_limiter()
+    rate_limiter.reset()
+    status = rate_limiter.get_status()
+    return {
+        "success": True,
+        "message": "Rate limit reset successfully",
+        "count": status["count"],
+        "limit": status["limit"],
+        "remaining": status["remaining"],
+        "last_date": status["last_date"]
+    }
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("BACKEND_PORT", 8000))

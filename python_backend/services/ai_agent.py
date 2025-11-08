@@ -5,6 +5,7 @@ Handles code analysis, topic extraction, and learning insights
 import os
 from typing import Dict, List, Optional
 from pydantic import BaseModel
+from services.rate_limiter import get_rate_limiter
 
 # Conditional imports - only if API key is available
 if os.getenv("GOOGLE_API_KEY"):
@@ -21,6 +22,8 @@ class LearningAnalysis(BaseModel):
     concepts: List[str]
     potential_struggles: List[str]
     summary: str
+    errors: List[Dict] = []  # List of detected errors/issues
+    weak_areas: List[str] = []  # Areas where learner needs improvement
 
 class AIAgent:
     """AI Agent using Gemini for code analysis"""
@@ -29,6 +32,7 @@ class AIAgent:
         """Initialize Gemini model"""
         api_key = os.getenv("GOOGLE_API_KEY")
         self.api_key_available = bool(api_key)
+        self.rate_limiter = get_rate_limiter()
         
         if self.api_key_available:
             try:
@@ -72,6 +76,19 @@ Analyze the provided code and identify:
 3. Specific concepts demonstrated in the code
 4. Potential areas where the learner might struggle based on code patterns
 5. A brief summary of what the learner is working on
+6. Any errors, bugs, or code issues (syntax errors, logic errors, best practice violations)
+7. Weak areas where the learner needs improvement (based on repeated patterns, missing concepts, etc.)
+
+For errors, provide:
+- Error type (syntax, logic, runtime, best practice)
+- Line number or location (if detectable)
+- Description of the issue
+- Severity (critical, warning, suggestion)
+
+For weak areas, identify:
+- Concepts that are missing or misunderstood
+- Patterns that indicate confusion
+- Areas needing more practice
 
 Be encouraging and specific. Focus on the learning journey.""")
         
@@ -91,9 +108,18 @@ Provide a structured analysis of what the learner is studying and working on."""
         if not self.api_key_available or not self.structured_llm:
             return self._mock_analysis(code_content, filename, filepath)
         
+        # Check rate limit
+        can_request, message = self.rate_limiter.can_make_request()
+        if not can_request:
+            print(f"⚠️  {message}")
+            return self._mock_analysis(code_content, filename, filepath)
+        
         try:
-            # Get structured analysis
+            # Get structured analysis (don't record until success)
             analysis = self.structured_llm.invoke([system_prompt, user_prompt])
+            
+            # Only record if successful
+            self.rate_limiter.record_request()
             
             # Type guard - ensure analysis is LearningAnalysis
             if isinstance(analysis, dict):
@@ -104,7 +130,9 @@ Provide a structured analysis of what the learner is studying and working on."""
                     "difficulty": analysis.get("difficulty", "intermediate"),
                     "concepts": analysis.get("concepts", []),
                     "potential_struggles": analysis.get("potential_struggles", []),
-                    "summary": analysis.get("summary", "")
+                    "summary": analysis.get("summary", ""),
+                    "errors": analysis.get("errors", []),
+                    "weak_areas": analysis.get("weak_areas", [])
                 }
             else:
                 # analysis is LearningAnalysis model
@@ -115,10 +143,17 @@ Provide a structured analysis of what the learner is studying and working on."""
                     "difficulty": analysis.difficulty,
                     "concepts": list(analysis.concepts) if analysis.concepts else [],
                     "potential_struggles": list(analysis.potential_struggles) if analysis.potential_struggles else [],
-                    "summary": analysis.summary
+                    "summary": analysis.summary,
+                    "errors": list(analysis.errors) if hasattr(analysis, 'errors') and analysis.errors else [],
+                    "weak_areas": list(analysis.weak_areas) if hasattr(analysis, 'weak_areas') and analysis.weak_areas else []
                 }
         except Exception as e:
-            # Fallback to mock analysis
+            # Check if it's a quota/quota error
+            error_str = str(e).lower()
+            if "quota" in error_str or "resourceexhausted" in error_str or "429" in error_str:
+                print(f"⚠️  API quota exceeded - using mock analysis")
+                return self._mock_analysis(code_content, filename, filepath)
+            # Fallback to mock analysis for other errors
             print(f"Error analyzing code: {e}")
             return self._mock_analysis(code_content, filename, filepath)
     
@@ -151,7 +186,9 @@ Provide a structured analysis of what the learner is studying and working on."""
             "difficulty": "intermediate",
             "concepts": ["Code structure", "Syntax"],
             "potential_struggles": [],
-            "summary": f"Working on {filename} - {len(code_content)} characters of code"
+            "summary": f"Working on {filename} - {len(code_content)} characters of code",
+            "errors": [],
+            "weak_areas": []
         }
     
     async def generate_recommendations(
@@ -191,9 +228,18 @@ Format as a clear list."""
         if not self.api_key_available or not self.llm:
             return self._mock_recommendations(topics)
         
+        # Check rate limit
+        can_request, message = self.rate_limiter.can_make_request()
+        if not can_request:
+            print(f"⚠️  {message}")
+            return self._mock_recommendations(topics)
+        
         try:
             from langchain_core.messages import HumanMessage
             response = await self.llm.ainvoke([HumanMessage(content=prompt)])
+            
+            # Only record if successful
+            self.rate_limiter.record_request()
             
             # Parse response into structured recommendations
             content = ""
@@ -209,6 +255,11 @@ Format as a clear list."""
             
             return self._parse_recommendations(content, topics)
         except Exception as e:
+            # Check if it's a quota/quota error
+            error_str = str(e).lower()
+            if "quota" in error_str or "resourceexhausted" in error_str or "429" in error_str:
+                print(f"⚠️  API quota exceeded - using mock recommendations")
+                return self._mock_recommendations(topics)
             return [{
                 "title": "Continue Learning",
                 "description": "Keep practicing and building projects",
@@ -275,9 +326,23 @@ Keep it concise but meaningful (3-4 sentences)."""
                 "total_sessions": len(sessions)
             }
         
+        # Check rate limit
+        can_request, message = self.rate_limiter.can_make_request()
+        if not can_request:
+            print(f"⚠️  {message}")
+            return {
+                "summary": f"Completed {len(sessions)} learning sessions covering {', '.join(unique_topics[:3])}.",
+                "topics_learned": unique_topics,
+                "struggling_topics": unique_struggles,
+                "total_sessions": len(sessions)
+            }
+        
         try:
             from langchain_core.messages import HumanMessage
             response = await self.llm.ainvoke([HumanMessage(content=prompt)])
+            
+            # Only record if successful
+            self.rate_limiter.record_request()
             
             return {
                 "summary": response.content,
@@ -286,6 +351,16 @@ Keep it concise but meaningful (3-4 sentences)."""
                 "total_sessions": len(sessions)
             }
         except Exception as e:
+            # Check if it's a quota/quota error
+            error_str = str(e).lower()
+            if "quota" in error_str or "resourceexhausted" in error_str or "429" in error_str:
+                print(f"⚠️  API quota exceeded - using fallback summary")
+                return {
+                    "summary": f"Completed {len(sessions)} learning sessions covering {', '.join(unique_topics[:3])}.",
+                    "topics_learned": unique_topics,
+                    "struggling_topics": unique_struggles,
+                    "total_sessions": len(sessions)
+                }
             return {
                 "summary": f"Summary generation error: {str(e)}",
                 "topics_learned": unique_topics,
@@ -408,9 +483,18 @@ Format as JSON with this structure:
         if not self.api_key_available or not self.llm:
             return self._mock_quiz(topics, num_questions)
         
+        # Check rate limit
+        can_request, message = self.rate_limiter.can_make_request()
+        if not can_request:
+            print(f"⚠️  {message}")
+            return self._mock_quiz(topics, num_questions)
+        
         try:
             from langchain_core.messages import HumanMessage
             response = await self.llm.ainvoke([HumanMessage(content=prompt)])
+            
+            # Only record if successful
+            self.rate_limiter.record_request()
             
             # Parse response
             content = ""
@@ -445,6 +529,11 @@ Format as JSON with this structure:
                 return self._parse_quiz_response(content, topics, num_questions)
                 
         except Exception as e:
+            # Check if it's a quota/quota error
+            error_str = str(e).lower()
+            if "quota" in error_str or "resourceexhausted" in error_str or "429" in error_str:
+                print(f"⚠️  API quota exceeded - using mock quiz")
+                return self._mock_quiz(topics, num_questions)
             print(f"Error generating quiz: {e}")
             return self._mock_quiz(topics, num_questions)
     
@@ -509,6 +598,179 @@ Format as JSON with this structure:
             "questions": questions,
             "message": "Mock quiz - configure GOOGLE_API_KEY for AI-generated questions"
         }
+    
+    async def generate_documentation_suggestions(
+        self,
+        errors: List[Dict],
+        weak_areas: List[str],
+        topics: List[str],
+        code_content: str
+    ) -> List[Dict]:
+        """
+        Generate documentation suggestions based on errors and weak areas
+        
+        Args:
+            errors: List of detected errors
+            weak_areas: Areas where learner needs improvement
+            topics: Topics being learned
+            code_content: The code content
+            
+        Returns:
+            List of documentation suggestions with links and descriptions
+        """
+        if not errors and not weak_areas:
+            return []
+        
+        prompt = f"""Based on the following code analysis, generate specific documentation suggestions:
+
+Errors Found: {len(errors)}
+{chr(10).join([f"- {e.get('type', 'Unknown')}: {e.get('description', '')}" for e in errors[:5]])}
+
+Weak Areas: {', '.join(weak_areas[:5])}
+Topics: {', '.join(topics[:5])}
+
+For each error or weak area, provide:
+1. Title of the documentation/resource
+2. URL or resource identifier (MDN, official docs, Stack Overflow, etc.)
+3. Brief description of why this resource helps
+4. Specific section or topic to focus on
+5. Difficulty level (beginner/intermediate/advanced)
+
+Format as a clear list of 3-5 most relevant documentation resources."""
+        
+        # Mock mode fallback
+        if not self.api_key_available or not self.llm:
+            return self._mock_documentation_suggestions(errors, weak_areas, topics)
+        
+        # Check rate limit
+        can_request, message = self.rate_limiter.can_make_request()
+        if not can_request:
+            print(f"⚠️  {message}")
+            return self._mock_documentation_suggestions(errors, weak_areas, topics)
+        
+        try:
+            from langchain_core.messages import HumanMessage
+            response = await self.llm.ainvoke([HumanMessage(content=prompt)])
+            
+            # Only record if successful
+            self.rate_limiter.record_request()
+            
+            content = ""
+            if isinstance(response.content, str):
+                content = response.content
+            elif isinstance(response.content, list):
+                for block in response.content:
+                    if isinstance(block, str):
+                        content += block
+                    elif isinstance(block, dict) and "text" in block:
+                        content += str(block.get("text", ""))
+            
+            return self._parse_documentation_suggestions(content, errors, weak_areas, topics)
+        except Exception as e:
+            # Check if it's a quota/quota error
+            error_str = str(e).lower()
+            if "quota" in error_str or "resourceexhausted" in error_str or "429" in error_str:
+                print(f"⚠️  API quota exceeded - using mock documentation suggestions")
+                return self._mock_documentation_suggestions(errors, weak_areas, topics)
+            print(f"Error generating documentation suggestions: {e}")
+            return self._mock_documentation_suggestions(errors, weak_areas, topics)
+    
+    def _parse_documentation_suggestions(
+        self,
+        content: str,
+        errors: List[Dict],
+        weak_areas: List[str],
+        topics: List[str]
+    ) -> List[Dict]:
+        """Parse documentation suggestions from LLM response"""
+        suggestions = []
+        lines = content.split('\n')
+        current_suggestion = {}
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                if current_suggestion:
+                    suggestions.append(current_suggestion)
+                    current_suggestion = {}
+                continue
+            
+            # Detect new suggestion
+            if line.startswith(('1.', '2.', '3.', '4.', '5.', '-', '*')):
+                if current_suggestion:
+                    suggestions.append(current_suggestion)
+                
+                # Extract title
+                title = line.lstrip('0123456789.-* ').split(' - ')[0]
+                current_suggestion = {
+                    "title": title,
+                    "url": "",
+                    "description": "",
+                    "focus_area": weak_areas[0] if weak_areas else topics[0] if topics else "General",
+                    "difficulty": "intermediate",
+                    "resource_type": "documentation"
+                }
+            
+            # Extract URL
+            if 'http' in line.lower() or 'mdn' in line.lower() or 'docs' in line.lower():
+                import re
+                url_match = re.search(r'https?://[^\s]+', line)
+                if url_match:
+                    current_suggestion["url"] = url_match.group(0)
+            
+            # Extract description
+            if current_suggestion and not current_suggestion.get("description"):
+                if len(line) > 20 and not line.startswith(('http', 'www')):
+                    current_suggestion["description"] = line[:200]
+        
+        if current_suggestion:
+            suggestions.append(current_suggestion)
+        
+        # Ensure we have suggestions
+        if not suggestions:
+            return self._mock_documentation_suggestions(errors, weak_areas, topics)
+        
+        return suggestions[:5]  # Return max 5
+    
+    def _mock_documentation_suggestions(
+        self,
+        errors: List[Dict],
+        weak_areas: List[str],
+        topics: List[str]
+    ) -> List[Dict]:
+        """Provide mock documentation suggestions"""
+        suggestions = []
+        
+        # Generate suggestions based on topics
+        topic_docs = {
+            "Python": {"url": "https://docs.python.org/3/", "title": "Python Official Documentation"},
+            "JavaScript": {"url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript", "title": "MDN JavaScript Guide"},
+            "React": {"url": "https://react.dev/", "title": "React Official Documentation"},
+            "TypeScript": {"url": "https://www.typescriptlang.org/docs/", "title": "TypeScript Handbook"},
+        }
+        
+        for topic in topics[:3]:
+            if topic in topic_docs:
+                suggestions.append({
+                    "title": topic_docs[topic]["title"],
+                    "url": topic_docs[topic]["url"],
+                    "description": f"Official documentation for {topic}",
+                    "focus_area": topic,
+                    "difficulty": "intermediate",
+                    "resource_type": "documentation"
+                })
+        
+        if not suggestions:
+            suggestions.append({
+                "title": "General Programming Documentation",
+                "url": "https://developer.mozilla.org/",
+                "description": "Comprehensive web development documentation",
+                "focus_area": topics[0] if topics else "Programming",
+                "difficulty": "intermediate",
+                "resource_type": "documentation"
+            })
+        
+        return suggestions
 
 # Lazy singleton - only initialize when first accessed
 _ai_agent_instance = None

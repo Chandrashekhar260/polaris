@@ -3,6 +3,7 @@ import StatCard from "@/components/StatCard";
 import ActivityCard from "@/components/ActivityCard";
 import RecommendationCard from "@/components/RecommendationCard";
 import TopicProgress from "@/components/TopicProgress";
+import LiveSuggestions from "@/components/LiveSuggestions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -145,6 +146,14 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Live Suggestions from VS Code */}
+      {isConnected && (
+        <div>
+          <h2 className="text-2xl font-semibold mb-4">Live Suggestions</h2>
+          <LiveSuggestions />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statsLoading ? (
