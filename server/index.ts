@@ -10,7 +10,7 @@ let pythonBackend: ReturnType<typeof spawn> | null = null;
 function startPythonBackend() {
   log("Starting Python backend...");
   
-  pythonBackend = spawn("python", ["main.py"], {
+  pythonBackend = spawn("python", ["run_backend.py"], {
     cwd: "./python_backend",
     stdio: ["ignore", "pipe", "pipe"]
   });
