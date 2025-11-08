@@ -1,0 +1,95 @@
+backend/
+├── main.py
+├── routes/
+│   ├── stream.py
+│   ├── insights.py
+│   ├── recommendations.py
+│   ├── summary.py
+├── services/
+│   ├── ai_agent.py
+│   ├── vector_store.py
+│   ├── recommender.py
+│   ├── summarizer.py
+│   ├── websocket_manager.py
+├── utils/
+│   ├── env_loader.py
+│   ├── text_cleaner.py
+├── db/
+│   ├── chroma_store/
+├── .env.example
+├── requirements.txt
+├── README.md
+
+---
+
+### 🔌 API & WEBSOCKET DETAILS
+
+#### `/ws/stream` (WebSocket)
+- Receives live code or text updates from local client.
+- Backend immediately:
+  - Sends text to Gemini (via LangChain).
+  - Extracts topic, concepts, and confusion points.
+  - Generates embeddings and stores in ChromaDB.
+  - Returns real-time AI insights back to the client socket.
+
+#### `/insights` [GET]
+- Returns the latest Gemini-based analysis, key mistakes, and topic difficulty.
+
+#### `/recommendations` [GET]
+- Returns learning materials (docs, tutorials, or explanations) relevant to the user’s recent struggles.
+
+#### `/summary` [GET]
+- Returns daily or weekly AI-generated learning summary using stored data.
+
+---
+
+### ⚙️ ENVIRONMENT VARIABLES (.env.example)
+
+GOOGLE_API_KEY=your_gemini_api_key_here
+CHROMA_DB_PATH=./db/chroma_store
+BACKEND_PORT=8000
+💡 Get Gemini API key here: https://makersuite.google.com/app/apikey
+
+---
+
+### 📘 REQUIREMENTS.TXT
+
+fastapi
+uvicorn
+langchain
+chromadb
+google-generativeai
+requests
+python-dotenv
+websockets
+
+---
+
+### ⚙️ WORKFLOW
+1. Local **watcher client** in VS Code detects file changes and streams data via WebSocket to backend `/ws/stream`.  
+2. Backend (Replit) receives data → cleans it → sends to Gemini → gets insights & topics → stores embeddings in ChromaDB.  
+3. When user queries `/insights`, `/recommendations`, or `/summary`, backend fetches data + generates responses via Gemini.  
+4. All updates happen automatically in real time — **no manual upload needed**.  
+
+---
+
+### 🧩 CONDITIONS
+- Must use **Gemini API** for all AI operations (summarization, recommendations, difficulty detection).  
+- Must store embeddings locally (ChromaDB).  
+- Must support **real-time processing** via WebSocket or SSE.  
+- Must create a clear modular structure with all services separated.  
+- Must include `.env.example`, `requirements.txt`, and `README.md`.
+
+---
+
+### ✅ EXPECTED OUTPUT
+Generate a **complete backend folder** that:
+- Runs with `uvicorn main:app --reload`  
+- Supports live WebSocket input from VS Code watcher  
+- Uses Gemini + LangChain for AI analysis  
+- Stores all embeddings locally in ChromaDB  
+- Provides REST APIs for insights, recommendations, and summaries  
+- Includes all required setup files for Replit  
+
+
+Would you like me to now give the next prompt for your VS Code watcher client — which detects file changes and sends them live to this backend?
