@@ -2,33 +2,39 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { WebSocketServer, WebSocket } from "ws";
+import { createProxyMiddleware } from "http-proxy-middleware";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Proxy HTTP API requests to Python backend
+  // Proxy all HTTP API requests to Python backend
+  // This handles JSON, multipart/form-data, and all other content types
   const PYTHON_BACKEND_HTTP = process.env.PYTHON_BACKEND_HTTP || 'http://localhost:8000';
   
-  app.all('/api/*', async (req, res) => {
-    // Don't proxy WebSocket upgrade requests (handled below)
+  // Create proxy that forwards /api/* to backend's /api/*
+  const apiProxy = createProxyMiddleware({
+    target: PYTHON_BACKEND_HTTP,
+    changeOrigin: true,
+    ws: false, // WebSocket handled separately below
+    pathRewrite: {
+      '^/': '/api/'  // app.use('/api') strips /api, so we add it back
+    },
+    onError: (err: Error, req: any, res: any) => {
+      console.error('❌ API Proxy Error:', err.message);
+      if (res && typeof res.writeHead === 'function') {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ 
+          error: 'Backend connection error', 
+          message: err.message 
+        }));
+      }
+    }
+  });
+  
+  // Apply proxy middleware to /api routes, but skip WebSocket upgrade requests
+  app.use('/api', (req, res, next) => {
     if (req.headers.upgrade === 'websocket') {
-      return;
+      return next();
     }
-    
-    try {
-      const url = `${PYTHON_BACKEND_HTTP}${req.path}${req.url.includes('?') ? '?' + req.url.split('?')[1] : ''}`;
-      
-      const response = await fetch(url, {
-        method: req.method,
-        headers: {
-          'Content-Type': req.headers['content-type'] || 'application/json',
-        },
-        body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined,
-      });
-      
-      const data = await response.json();
-      res.status(response.status).json(data);
-    } catch (error: any) {
-      res.status(500).json({ error: 'Backend connection error', message: error.message });
-    }
+    return apiProxy(req, res, next);
   });
 
   const httpServer = createServer(app);
