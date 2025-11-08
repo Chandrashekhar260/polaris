@@ -25,6 +25,20 @@ class LearningAnalysis(BaseModel):
     errors: List[Dict] = []  # List of detected errors/issues
     weak_areas: List[str] = []  # Areas where learner needs improvement
 
+class Recommendation(BaseModel):
+    """Structured output for a single recommendation"""
+    title: str
+    description: str
+    reason: str
+    estimated_time: str
+    difficulty: str  # "beginner", "intermediate", "advanced"
+    resource_type: str  # "video", "article", "documentation", "tutorial", "practice", "getting-started"
+    topics: List[str]
+
+class RecommendationList(BaseModel):
+    """Structured output for recommendations"""
+    recommendations: List[Recommendation]
+
 class AIAgent:
     """AI Agent using Gemini for code analysis"""
     
@@ -43,6 +57,8 @@ class AIAgent:
                 )
                 # Structured output LLM for analysis
                 self.structured_llm = self.llm.with_structured_output(LearningAnalysis)
+                # Structured output LLM for recommendations
+                self.recommendation_llm = self.llm.with_structured_output(RecommendationList)
             except Exception as e:
                 print(f"Warning: Failed to initialize Gemini: {e}")
                 self.api_key_available = False
@@ -51,6 +67,7 @@ class AIAgent:
             print("⚠️  Running in mock mode - GOOGLE_API_KEY not configured")
             self.llm = None
             self.structured_llm = None
+            self.recommendation_llm = None
     
     async def analyze_code(
         self,
@@ -208,24 +225,38 @@ Provide a structured analysis of what the learner is studying and working on."""
         Returns:
             List of recommendation dictionaries
         """
-        prompt = f"""Based on a learner's recent activity:
+        system_prompt = SystemMessage(content="""You are an expert learning advisor who helps developers learn effectively.
+
+Generate diverse, actionable learning recommendations with varied resource types:
+- **video**: Visual tutorials, coding walkthroughs, conference talks
+- **article**: Blog posts, guides, best practice articles  
+- **documentation**: Official docs, API references, language specifications
+- **tutorial**: Step-by-step coding tutorials, interactive lessons
+- **practice**: Coding challenges, exercises, project ideas
+- **getting-started**: Beginner-friendly introductions, quick starts
+
+Provide a mix of resource types to support different learning styles. Match difficulty to learner level.""")
+        
+        user_prompt = HumanMessage(content=f"""Based on a learner's recent coding activity:
 
 Topics: {', '.join(topics)}
-Potential Struggles: {', '.join(struggles)}
+Potential Struggles: {', '.join(struggles) if struggles else 'None identified'}
 Recent Work: {recent_code_summary}
 
-Generate 3-5 specific, actionable learning recommendations. For each recommendation:
-1. Title of the resource/tutorial
-2. Brief description
-3. Why it's relevant to their learning
-4. Estimated time to complete
-5. Difficulty level (beginner/intermediate/advanced)
-6. Resource type (tutorial/documentation/video/article)
+Generate 4-6 specific, actionable learning recommendations with DIVERSE resource types.
+Include at least 2 videos, 1-2 articles, and mix in documentation/tutorials/practice.
 
-Format as a clear list."""
+For each recommendation provide:
+- Compelling title of the specific resource
+- Clear description (what they'll learn)
+- Why it's relevant to their current work
+- Realistic time estimate (e.g., "15 min", "1 hour", "2-3 hours")
+- Appropriate difficulty level
+- Resource type that matches the content
+- Relevant topics from their learning""")
         
         # Mock mode fallback
-        if not self.api_key_available or not self.llm:
+        if not self.api_key_available or not self.recommendation_llm:
             return self._mock_recommendations(topics)
         
         # Check rate limit
@@ -235,39 +266,44 @@ Format as a clear list."""
             return self._mock_recommendations(topics)
         
         try:
-            from langchain_core.messages import HumanMessage
-            response = await self.llm.ainvoke([HumanMessage(content=prompt)])
+            # Get structured recommendations
+            result = await self.recommendation_llm.ainvoke([system_prompt, user_prompt])
             
             # Only record if successful
             self.rate_limiter.record_request()
             
-            # Parse response into structured recommendations
-            content = ""
-            if isinstance(response.content, str):
-                content = response.content
-            elif isinstance(response.content, list):
-                # Extract text from list of content blocks
-                for block in response.content:
-                    if isinstance(block, str):
-                        content += block
-                    elif isinstance(block, dict) and "text" in block:
-                        content += str(block.get("text", ""))
+            # Convert to dict format
+            if isinstance(result, dict) and "recommendations" in result:
+                recs = result["recommendations"]
+            else:
+                recs = result.recommendations if hasattr(result, 'recommendations') else []
             
-            return self._parse_recommendations(content, topics)
+            # Convert Recommendation models to dicts
+            recommendations = []
+            for rec in recs:
+                if isinstance(rec, dict):
+                    recommendations.append(rec)
+                else:
+                    recommendations.append({
+                        "title": rec.title,
+                        "description": rec.description,
+                        "reason": rec.reason,
+                        "estimated_time": rec.estimated_time,
+                        "difficulty": rec.difficulty,
+                        "resource_type": rec.resource_type,
+                        "topics": list(rec.topics) if rec.topics else []
+                    })
+            
+            return recommendations[:6]  # Return max 6
+            
         except Exception as e:
             # Check if it's a quota/quota error
             error_str = str(e).lower()
             if "quota" in error_str or "resourceexhausted" in error_str or "429" in error_str:
                 print(f"⚠️  API quota exceeded - using mock recommendations")
                 return self._mock_recommendations(topics)
-            return [{
-                "title": "Continue Learning",
-                "description": "Keep practicing and building projects",
-                "reason": f"Error generating recommendations: {str(e)}",
-                "estimated_time": "ongoing",
-                "difficulty": "intermediate",
-                "resource_type": "practice"
-            }]
+            print(f"Error generating recommendations: {e}")
+            return self._mock_recommendations(topics)
     
     async def generate_summary(
         self,
@@ -417,16 +453,56 @@ Keep it concise but meaningful (3-4 sentences)."""
         return recommendations[:5]  # Return max 5
     
     def _mock_recommendations(self, topics: List[str]) -> List[Dict]:
-        """Provide mock recommendations when API is not available"""
-        return [{
-            "title": f"Learn more about {topics[0] if topics else 'programming'}",
-            "description": "Continue practicing and exploring this topic to build mastery",
-            "reason": "Mock recommendation - configure GOOGLE_API_KEY for AI-powered suggestions",
-            "estimated_time": "ongoing",
-            "difficulty": "intermediate",
-            "resource_type": "tutorial",
-            "topics": topics[:3]
-        }]
+        """Provide mock recommendations with diverse resource types when API is not available"""
+        main_topic = topics[0] if topics else 'programming'
+        
+        return [
+            {
+                "title": f"{main_topic} Video Tutorial Series",
+                "description": f"Comprehensive video series covering {main_topic} fundamentals and best practices",
+                "reason": "Mock recommendation - configure GOOGLE_API_KEY for AI-powered suggestions",
+                "estimated_time": "2-3 hours",
+                "difficulty": "intermediate",
+                "resource_type": "video",
+                "topics": topics[:2]
+            },
+            {
+                "title": f"Understanding {main_topic}: Complete Guide",
+                "description": f"In-depth article explaining core concepts and practical applications of {main_topic}",
+                "reason": "Mock recommendation - configure GOOGLE_API_KEY for AI-powered suggestions",
+                "estimated_time": "30 min",
+                "difficulty": "beginner",
+                "resource_type": "article",
+                "topics": topics[:2]
+            },
+            {
+                "title": f"Official {main_topic} Documentation",
+                "description": f"Reference documentation and API guides for {main_topic}",
+                "reason": "Mock recommendation - configure GOOGLE_API_KEY for AI-powered suggestions",
+                "estimated_time": "ongoing",
+                "difficulty": "intermediate",
+                "resource_type": "documentation",
+                "topics": topics[:2]
+            },
+            {
+                "title": f"Hands-on {main_topic} Tutorial",
+                "description": f"Step-by-step tutorial to build a real project using {main_topic}",
+                "reason": "Mock recommendation - configure GOOGLE_API_KEY for AI-powered suggestions",
+                "estimated_time": "1-2 hours",
+                "difficulty": "intermediate",
+                "resource_type": "tutorial",
+                "topics": topics[:2]
+            },
+            {
+                "title": f"{main_topic} Practice Challenges",
+                "description": f"Coding exercises and challenges to reinforce {main_topic} skills",
+                "reason": "Mock recommendation - configure GOOGLE_API_KEY for AI-powered suggestions",
+                "estimated_time": "ongoing",
+                "difficulty": "intermediate",
+                "resource_type": "practice",
+                "topics": topics[:3]
+            }
+        ]
     
     async def generate_quiz(
         self,

@@ -12,6 +12,36 @@ import {
 } from "@/components/ui/select";
 import { useRecommendations } from "@/hooks/useLearningData";
 import { queryClient } from "@/lib/queryClient";
+import { motion, AnimatePresence } from "framer-motion";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08
+    }
+  }
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring",
+      stiffness: 100,
+      damping: 15
+    }
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    transition: { duration: 0.2 }
+  }
+};
 
 export default function Recommendations() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
@@ -115,11 +145,24 @@ export default function Recommendations() {
           </div>
         </div>
       ) : filteredRecommendations.length > 0 ? (
-        <div className="space-y-4">
-          {filteredRecommendations.map((rec, idx) => (
-            <RecommendationCard key={idx} {...rec} data-testid={`recommendation-${idx}`} />
-          ))}
-        </div>
+        <motion.div 
+          className="space-y-4"
+          initial="hidden"
+          animate="visible"
+          variants={containerVariants}
+        >
+          <AnimatePresence>
+            {filteredRecommendations.map((rec, idx) => (
+              <motion.div
+                key={`${rec.title}-${idx}`}
+                variants={cardVariants}
+                layout
+              >
+                <RecommendationCard {...rec} data-testid={`recommendation-${idx}`} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
       ) : (
         <div className="text-center py-12">
           <p className="text-muted-foreground">

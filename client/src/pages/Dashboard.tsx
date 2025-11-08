@@ -11,6 +11,45 @@ import { useInsights, useRecommendations, useSummaryStats, useBackendHealth } fr
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { useEffect } from "react";
 import { queryClient } from "@/lib/queryClient";
+import { motion } from "framer-motion";
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 100,
+      damping: 15
+    }
+  }
+};
+
+const slideInVariants = {
+  hidden: { opacity: 0, x: -30 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      type: "spring",
+      stiffness: 80,
+      damping: 20
+    }
+  }
+};
 
 export default function Dashboard() {
   const { data: insights, isLoading: insightsLoading, isError: insightsError, refetch: refetchInsights } = useInsights();
@@ -58,9 +97,17 @@ export default function Dashboard() {
   })) || [];
 
   return (
-    <div className="space-y-8 custom-scrollbar">
+    <motion.div 
+      className="space-y-8 custom-scrollbar"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
       {/* Hero Header with Gradient */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-pink-500/10 p-8 border border-purple-500/20">
+      <motion.div 
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-pink-500/10 p-8 border border-purple-500/20"
+        variants={itemVariants}
+      >
         <div className="absolute inset-0 bg-grid-white/5 [mask-image:linear-gradient(0deg,white,transparent)]"></div>
         <div className="relative">
           <div className="flex items-center justify-between mb-4">
@@ -161,11 +208,14 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Live Suggestions */}
       {isConnected && (
-        <div className="space-y-4">
+        <motion.div 
+          className="space-y-4"
+          variants={slideInVariants}
+        >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
               <Zap className="w-5 h-5 text-white" />
@@ -173,11 +223,14 @@ export default function Dashboard() {
             <h2 className="text-2xl font-bold">Live Suggestions</h2>
           </div>
           <LiveSuggestions />
-        </div>
+        </motion.div>
       )}
 
       {/* Stats Grid - Enhanced with gradients */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <motion.div 
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        variants={itemVariants}
+      >
         {statsLoading ? (
           <>
             {Array.from({ length: 4 }).map((_, i) => (
@@ -239,7 +292,7 @@ export default function Dashboard() {
             </div>
           </>
         )}
-      </div>
+      </motion.div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -368,6 +421,6 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
