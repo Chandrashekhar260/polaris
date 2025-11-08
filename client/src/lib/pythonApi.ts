@@ -3,7 +3,7 @@
  * Handles communication with FastAPI backend for AI learning insights
  */
 
-const PYTHON_API_BASE = import.meta.env.VITE_PYTHON_API_URL || 'http://localhost:8000';
+const PYTHON_API_BASE = import.meta.env.VITE_PYTHON_API_URL || '';
 
 export interface LearningSession {
   id: string;

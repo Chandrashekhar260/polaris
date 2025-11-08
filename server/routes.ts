@@ -4,11 +4,32 @@ import { storage } from "./storage";
 import { WebSocketServer, WebSocket } from "ws";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
-
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  // Proxy HTTP API requests to Python backend
+  const PYTHON_BACKEND_HTTP = process.env.PYTHON_BACKEND_HTTP || 'http://localhost:8000';
+  
+  app.all('/api/*', async (req, res) => {
+    // Don't proxy WebSocket upgrade requests (handled below)
+    if (req.headers.upgrade === 'websocket') {
+      return;
+    }
+    
+    try {
+      const url = `${PYTHON_BACKEND_HTTP}${req.path}${req.url.includes('?') ? '?' + req.url.split('?')[1] : ''}`;
+      
+      const response = await fetch(url, {
+        method: req.method,
+        headers: {
+          'Content-Type': req.headers['content-type'] || 'application/json',
+        },
+        body: req.method !== 'GET' && req.method !== 'HEAD' ? JSON.stringify(req.body) : undefined,
+      });
+      
+      const data = await response.json();
+      res.status(response.status).json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: 'Backend connection error', message: error.message });
+    }
+  });
 
   const httpServer = createServer(app);
 
