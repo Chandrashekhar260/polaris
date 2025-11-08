@@ -1,0 +1,102 @@
+You are an expert AI systems developer.  
+Build a full-stack intelligent AGENT called “Personal Learning AI Agent” that runs from Replit as a backend service and connects to my local VS Code (or any IDE) to monitor learning activity in real time.
+
+---
+
+### 🎯 PURPOSE
+
+The agent should automatically:
+1. Detect the user’s learning or coding activity (via a local watcher/extension that syncs file updates to the Replit backend).
+2. Analyze what the user is doing — the code, comments, notes, or error logs.
+3. Use the **Gemini API** to:
+   - Understand the learning context
+   - Identify struggles or repeated mistakes
+   - Suggest specific learning materials, docs, or tutorials
+   - Summarize the user’s progress
+4. Store everything in a vector database for personalized learning memory.
+5. Display insights and suggestions on a modern web dashboard.
+
+---
+
+### 🧩 SYSTEM OVERVIEW
+
+**Agent Components:**
+
+1. **Agent Core (Backend – Replit):**
+   - Written in Python (FastAPI)
+   - Uses LangChain for orchestration
+   - Integrates Google Gemini API for summarization & suggestions
+   - Uses ChromaDB or FAISS for local vector search
+   - Provides REST API endpoints:
+     - `/analyze` → for live analysis updates
+     - `/recommend` → for learning suggestions
+     - `/summary` → for progress and topic summaries
+
+2. **Local Watcher (VS Code Extension or CLI script):**
+   - A small Node.js or Python script that runs locally
+   - Watches the user’s code directory for file saves
+   - Sends file content + metadata via HTTPS POST to Replit backend (`/analyze`)
+   - Keeps running silently as user codes or learns
+
+3. **Frontend Dashboard (React + Tailwind + shadcn/ui):**
+   - Displays:
+     - Current topics being learned
+     - Detected problem areas
+     - Suggested docs/resources
+     - Weekly AI summaries
+     - Progress timeline or charts
+   - Uses Axios to fetch data from Replit backend
+
+---
+
+### ⚙️ TECH STACK
+
+**Backend (Replit):**
+- Python
+- FastAPI
+- LangChain
+- ChromaDB / FAISS
+- Watchdog (optional server monitor)
+- Google Gemini API
+- python-dotenv
+- Uvicorn
+
+**Frontend:**
+- React
+- TailwindCSS
+- shadcn/ui
+- Axios
+- Recharts
+
+**Local Monitor (VS Code):**
+- Python or Node.js script using `watchdog` / `chokidar`
+- Sends data to Replit backend using `requests` or `axios`
+
+---
+
+### 🧠 FUNCTIONAL FLOW
+
+1. **User edits or saves a file in VS Code.**
+2. **Local watcher** detects the change → sends updated text & filename to **Replit backend API**.
+3. **Replit backend (FastAPI)**:
+   - Stores the snippet in ChromaDB
+   - Sends content to **Gemini API**
+   - Gemini analyzes:
+     - What topic the file relates to
+     - What the user seems to be learning
+     - Any errors, patterns, or struggle indicators
+   - Generates a short summary + recommendations
+4. Backend updates the database with:
+   - Topic tags
+   - Summary
+   - Suggested resources
+5. **Frontend dashboard** fetches updates via `/summary` and displays:
+   - Ongoing learning journey
+   - Weak topics
+   - Suggested tutorials/videos/articles
+   - Weekly AI study plan
+
+---
+
+### 📦 PROJECT STRUCTURE
+
