@@ -80,10 +80,11 @@ export default function Recommendations() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="tutorial">Tutorial</SelectItem>
-              <SelectItem value="documentation">Documentation</SelectItem>
-              <SelectItem value="video">Video</SelectItem>
               <SelectItem value="article">Article</SelectItem>
+              <SelectItem value="documentation">Documentation</SelectItem>
+              <SelectItem value="practice">Practice</SelectItem>
+              <SelectItem value="tutorial">Tutorial</SelectItem>
+              <SelectItem value="video">Video</SelectItem>
             </SelectContent>
           </Select>
         </div>
