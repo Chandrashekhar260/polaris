@@ -6,8 +6,14 @@ import os
 from typing import List, Dict, Optional
 import chromadb
 from chromadb.config import Settings
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from datetime import datetime
+
+# Conditional import - only if API key available
+if os.getenv("GOOGLE_API_KEY"):
+    try:
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+    except ImportError:
+        pass
 
 class VectorStore:
     """ChromaDB vector store for learning sessions"""
@@ -26,6 +32,7 @@ class VectorStore:
         
         if self.api_key_available:
             try:
+                from langchain_google_genai import GoogleGenerativeAIEmbeddings
                 self.embedding_function = GoogleGenerativeAIEmbeddings(
                     model="models/text-embedding-004"
                 )
@@ -226,5 +233,14 @@ class VectorStore:
             print(f"Error searching sessions: {e}")
             return []
 
-# Singleton instance
-vector_store = VectorStore()
+# Lazy singleton - only initialize when first accessed
+_vector_store_instance = None
+
+def get_vector_store():
+    global _vector_store_instance
+    if _vector_store_instance is None:
+        _vector_store_instance = VectorStore()
+    return _vector_store_instance
+
+# For backwards compatibility  
+vector_store = None  # Will be set on first import by routes

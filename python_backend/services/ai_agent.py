@@ -4,9 +4,15 @@ Handles code analysis, topic extraction, and learning insights
 """
 import os
 from typing import Dict, List, Optional
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel
+
+# Conditional imports - only if API key is available
+if os.getenv("GOOGLE_API_KEY"):
+    try:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        from langchain_core.messages import HumanMessage, SystemMessage
+    except ImportError:
+        pass
 
 class LearningAnalysis(BaseModel):
     """Structured output for learning analysis"""
@@ -26,6 +32,7 @@ class AIAgent:
         
         if self.api_key_available:
             try:
+                from langchain_google_genai import ChatGoogleGenerativeAI
                 self.llm = ChatGoogleGenerativeAI(
                     model="gemini-2.0-flash-exp",
                     temperature=0.3
@@ -185,6 +192,7 @@ Format as a clear list."""
             return self._mock_recommendations(topics)
         
         try:
+            from langchain_core.messages import HumanMessage
             response = await self.llm.ainvoke([HumanMessage(content=prompt)])
             
             # Parse response into structured recommendations
@@ -268,6 +276,7 @@ Keep it concise but meaningful (3-4 sentences)."""
             }
         
         try:
+            from langchain_core.messages import HumanMessage
             response = await self.llm.ainvoke([HumanMessage(content=prompt)])
             
             return {
@@ -344,5 +353,14 @@ Keep it concise but meaningful (3-4 sentences)."""
             "topics": topics[:3]
         }]
 
-# Singleton instance
-ai_agent = AIAgent()
+# Lazy singleton - only initialize when first accessed
+_ai_agent_instance = None
+
+def get_ai_agent():
+    global _ai_agent_instance
+    if _ai_agent_instance is None:
+        _ai_agent_instance = AIAgent()
+    return _ai_agent_instance
+
+# For backwards compatibility
+ai_agent = None  # Will be set on first import by routes

@@ -24,6 +24,21 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Initialize services on startup
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services when app starts"""
+    from services.ai_agent import get_ai_agent
+    from services.vector_store import get_vector_store
+    import services.ai_agent as ai_module
+    import services.vector_store as vs_module
+    
+    # Initialize singletons
+    ai_module.ai_agent = get_ai_agent()
+    vs_module.vector_store = get_vector_store()
+    
+    print("✅ Services initialized successfully")
+
 # CORS middleware for frontend communication
 app.add_middleware(
     CORSMiddleware,
