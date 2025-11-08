@@ -1,0 +1,60 @@
+═══════════════════════════════════════════════════════════
+  LEARNAI WATCHER - SUPER EASY SETUP (3 CLICKS!)
+═══════════════════════════════════════════════════════════
+
+📥 STEP 1: Download
+───────────────────
+Download the "local_watcher" folder to your computer
+Put it anywhere: Desktop, Documents, etc.
+
+
+🚀 STEP 2: Run Setup Script
+───────────────────────────
+
+WINDOWS:
+  → Double-click: setup.bat
+  
+MAC/LINUX:  
+  → Open Terminal in this folder
+  → Type: bash setup.sh
+
+
+✏️ STEP 3: Edit Config (Opens Automatically)
+──────────────────────────────────────────────
+Change just 1 line:
+
+  "watch_directory": "C:/YOUR/PROJECT/PATH"
+
+Example: "C:/Users/John/MyReactApp"
+
+
+▶️ STEP 4: Start Watcher
+─────────────────────────
+  → Double-click: run.bat (Windows)
+  OR
+  → Run: python watcher.py
+
+
+✅ DONE! Code in VS Code and get AI recommendations!
+
+
+═══════════════════════════════════════════════════════════
+  TROUBLESHOOTING
+═══════════════════════════════════════════════════════════
+
+❌ "Python not found"
+   → Install: https://www.python.org/downloads/
+   ✓ Check "Add Python to PATH" during install
+
+❌ Setup script won't run
+   Windows: Right-click setup.bat → Run as Administrator
+   Mac: Run: chmod +x setup.sh
+
+❌ Can't connect to backend
+   → Make sure Replit app is running (green button)
+   → Check backend_url in config.json
+
+
+═══════════════════════════════════════════════════════════
+
+Need help? Ask in the Replit project! 💬
