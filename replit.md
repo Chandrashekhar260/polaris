@@ -24,6 +24,11 @@ Preferred communication style: Simple, everyday language.
 - Tailwind CSS with custom design tokens for styling
 - Custom CSS variables for theming (light/dark mode support)
 - Design inspired by Linear's productivity aesthetics and Notion's knowledge management interface
+- **Smooth Animations:** Framer Motion integration for enhanced UX
+  - Fade-in and slide-in entrance animations for page loads
+  - Staggered children animations for cards and recommendation lists
+  - Layout animations for dynamic content changes
+  - Subtle timing (0.3-0.5s) for professional feel
 
 **State Management Approach:**
 - React Query handles all Python backend REST API state with 10-60 second refetch intervals
@@ -74,11 +79,16 @@ The application uses two separate backend services that communicate:
 
 **AI Integration:**
 - Google Gemini 2.0 Flash model via LangChain framework
-- Structured output using Pydantic models (LearningAnalysis schema)
+- Structured output using Pydantic models (LearningAnalysis, RecommendationList schemas)
 - Temperature set to 0.3 for consistent, focused analysis
+- **Diverse Recommendations:** AI generates 4-6 recommendations with varied resource types
+  - At least 2 video resources for visual learning
+  - 1-2 article resources for detailed reading
+  - Mix of documentation, tutorials, and practice exercises
+  - Resources intelligently matched to code topics and difficulty level
 - **Graceful Degradation:** Backend starts and functions without GOOGLE_API_KEY
   - Mock analysis returns basic topic detection based on file extensions
-  - Mock recommendations provide placeholder suggestions
+  - Mock recommendations provide placeholder suggestions with diverse resource types
   - All endpoints remain functional for testing and development
   - Console warnings indicate mock mode is active
 
